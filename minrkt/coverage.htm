@@ -1,0 +1,867 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>minrkt: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">my.com/cs5400/minrkt/evaluator.go (100.0%)</option>
+				
+				<option value="file1">my.com/cs5400/minrkt/parser.go (82.7%)</option>
+				
+				<option value="file2">my.com/cs5400/minrkt/tokenizer.go (94.4%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package minrkt
+
+import (
+        "fmt"
+        "reflect"
+)
+
+// global variables Hashmap_minrkt stack
+var stack Stack
+
+</span>func Evaluator(exp Exp, Stack Stack) Exp {
+        stack = Stack
+        r</span>eturn exp
+}<span class="cov8" title="1">
+</span>
+/*
+Pr</span>int Result nicely
+*<span class="cov8" title="1">/
+</span>func PrintResult(exp Exp) (interface{}, error) {
+
+</span>        res, err := exp.eval()
+        if</span> err <span class="cov8" title="1">!= nil {
+                fmt.Println("[FINAL RESULT]: " + fmt.Sprintf("%s", err))
+                r</span>eturn 0, err
+        }
+        if res == nil {
+        <span class="cov8" title="1">        return nil, ni</span>l
+        }
+
+        if t := reflect.TypeOf(res); t.String() == "float64" {
+                res = reflect.ValueOf(res).Interface().(float64)
+                fmt.Println("[FINAL RESULT]: " + fmt.Sprintf("%f", res))
+        }
+        if t := reflect.TypeOf(res); t.String() == "bool" {
+                res = reflect.ValueOf(res).Interface().(bool)
+                if res == true {
+                        fmt.Println("[FINAL RESULT]: #t")
+                } else {
+                        fmt.Println("[FINAL RESULT]: #f")
+                }
+
+        }
+        return res, nil
+}
+
+/*
+A Exp interface
+*/
+type Exp interface {
+        eval() (interface{}, error)
+        PrintExp() string
+        getVarName() string
+        getOperands() []Exp
+}
+
+type expNumber struct {
+        val float64
+}
+
+type expOperator struct {
+        opType   TokenType
+        operands []Exp
+}
+
+// HW5 Update: A new exp for var of function
+type expVar struct {
+        opType  TokenType
+        varName string
+}
+
+func (e *expVar) getVarName() string {
+        return e.varName
+}
+
+func (e *expNumber) getVarName() string {
+
+        return ""
+}
+
+func (e *expOperator) getVarName() string {
+        return ""
+}
+
+func (e *expVar) getOperands() []Exp {
+        return nil
+}
+
+func (e *expNumber) getOperands() []Exp {
+        return nil
+}
+
+func (e *expOperator) getOperands() []Exp {
+        return e.operands
+}
+
+/*
+HW5 Update:
+
+        eval() for expVar
+        return eval() from map's value of Hashmap_minrkt
+*/
+func (e *expVar) eval() (interface{}, error) {
+        if value, ok := stack.StackHM[len(stack.StackHM)-1].TemporaryMap[e.varName]; ok {
+                return value.eval()
+        }
+        if _, ok := stack.StackHM[len(stack.StackHM)-1].DefineNameMap[e.varName]; ok {
+                for _, i := range stack.StackHM[len(stack.StackHM)-1].DefineFuncParser[e.varName].getOperands() {
+                        if i.getVarName() != "" &amp;&amp; i.getVarName() == e.varName {
+                                return nil, fmt.Errorf("cannot reference an identifier before its definition")
+                        }
+                }
+                return stack.StackHM[len(stack.StackHM)-1].DefineFuncParser[e.varName].eval()
+        }
+        return nil, fmt.Errorf("missing a variable error")
+}
+
+func (e *expNumber) eval() (interface{}, error) {
+        return e.val, nil
+}
+
+/*
+HW5 Update:
+*/
+func (e *expOperator) eval() (interface{}, error) {
+        if len(e.operands) == 0 &amp;&amp; e.opType == 0 {
+                return 0, nil
+        }
+        if e.opType == TOK_INVALID {
+                return 0, fmt.Errorf("TOK_INVALID")
+        }
+        var res float64
+        var v float64
+        if e.opType == TOK_DEFINE {
+                if len(e.operands) != 2 {
+                        return 0, fmt.Errorf("2 number operators only")
+                }
+                funcName := e.operands[0].getVarName()
+                if funcName != "" {
+                        stack.StackHM[len(stack.StackHM)-1].DefineNameMap[funcName] = e.operands[0]
+                        stack.StackHM[len(stack.StackHM)-1].DefineFuncParser[funcName] = e.operands[1]
+                } else {
+                        stack.StackHM[len(stack.StackHM)-1].DefineNameMap[e.operands[0].getOperands()[0].getVarName()] = e.operands[0]
+                        stack.StackHM[len(stack.StackHM)-1].DefineFuncParser[e.operands[0].getOperands()[0].getVarName()] = e.operands[1]
+                }
+
+                return nil, nil
+        } else if e.opType == TOK_DEF_VAR {
+                if storedEXP, ok := stack.StackHM[len(stack.StackHM)-1].DefineNameMap[e.operands[0].getVarName()]; ok {
+                        if len(storedEXP.getOperands()) != len(e.operands) {
+                                return nil, fmt.Errorf("variable number error")
+                        }
+                        // If found a function into recursion
+                        if _, ok := stack.StackHM[len(stack.StackHM)-1].TemporaryMap[e.operands[0].getVarName()]; ok {
+                                TemporaryNameMap := CopyMap(stack.StackHM[len(stack.StackHM)-1].DefineNameMap)
+                                TemporaryFuncParser := CopyMap(stack.StackHM[len(stack.StackHM)-1].DefineFuncParser)
+                                TemporaryNewMap := CopyMap(stack.StackHM[len(stack.StackHM)-1].TemporaryMap)
+                                for i := 1; i &lt; len(e.operands); i++ {
+                                        temp, _ := e.operands[i].eval()
+                                        num := expNumber{val: reflect.ValueOf(temp).Interface().(float64)}
+                                        TemporaryNewMap[TemporaryNameMap[e.operands[0].getVarName()].getOperands()[i].getVarName()] = &amp;num
+                                }
+
+                                TemporaryStorage := Hashmap_minrkt{DefineNameMap: TemporaryNameMap, DefineFuncParser: TemporaryFuncParser, TemporaryMap: TemporaryNewMap}
+                                stack.StackHM = append(stack.StackHM, TemporaryStorage)
+                                TempExp := Evaluator(TemporaryFuncParser[e.operands[0].getVarName()], stack)
+                                defer func() {
+                                        stack.StackHM = stack.StackHM[:len(stack.StackHM)-1]
+                                }()
+                                return TempExp.eval()
+                        }
+                        // not found a function normal loop
+                        for i := 0; i &lt; len(e.operands); i++ {
+                                if e.operands[i].getVarName() == "" {
+                                        stack.StackHM[len(stack.StackHM)-1].TemporaryMap[storedEXP.getOperands()[i].getVarName()] = e.operands[i]
+                                        continue
+                                } else {
+                                        if value, ok := stack.StackHM[len(stack.StackHM)-1].DefineNameMap[e.operands[i].getVarName()]; ok {
+                                                stack.StackHM[len(stack.StackHM)-1].TemporaryMap[storedEXP.getOperands()[i].getVarName()] = value
+                                                continue
+                                        }
+                                        return nil, fmt.Errorf("unknow variable number error")
+                                }
+                        }
+                        return stack.StackHM[len(stack.StackHM)-1].DefineFuncParser[e.getOperands()[0].getVarName()].eval()
+                }
+                return nil, fmt.Errorf("cannot reference an identifier before its definition2")
+        } else if e.opType == TOK_BOOL_T || e.opType == TOK_BOOL_F {
+                if len(e.operands) != 0 {
+                        return 0, fmt.Errorf("invalid expression")
+                }
+                if e.opType == TOK_BOOL_T {
+                        return true, nil
+                } else {
+                        return false, nil
+                }
+        } else if e.opType == TOK_COMP_EQ {
+                if len(e.operands) == 0 {
+                        return 0, fmt.Errorf("invalid expression")
+                }
+                if len(e.operands) == 1 {
+                        return e.operands[0].eval()
+                }
+                if len(e.operands) &gt; 2 {
+                        return 0, fmt.Errorf("2 number operators only")
+                }
+                temp, err := e.operands[0].eval()
+                temp2, err2 := e.operands[1].eval()
+                if err != nil || err2 != nil {
+                        return 0, fmt.Errorf("invalid expression")
+                }
+                if reflect.TypeOf(temp) == reflect.TypeOf(temp2) {
+                        return reflect.ValueOf(temp).Interface() ==
+                                reflect.ValueOf(temp2).Interface(), nil
+                }
+                return 0, fmt.Errorf("invalid expression")
+        } else if e.opType == TOK_COMP_GE || e.opType == TOK_COMP_G || e.opType == TOK_COMP_S || e.opType == TOK_COMP_SE {
+                if len(e.operands) != 2 {
+                        return 0, fmt.Errorf("2 number operators only")
+                }
+                temp, err := e.operands[0].eval()
+                t := reflect.TypeOf(temp)
+                if err != nil || t.String() != "float64" {
+                        return 0, fmt.Errorf("invalid expression")
+                }
+                temp2, err2 := e.operands[1].eval()
+                t2 := reflect.TypeOf(temp2)
+                if err2 != nil || t2.String() != "float64" {
+                        return 0, fmt.Errorf("invalid expression")
+                }
+                if e.opType == TOK_COMP_GE {
+                        return reflect.ValueOf(temp).Interface().(float64) &gt;=
+                                reflect.ValueOf(temp2).Interface().(float64), nil
+                } else if e.opType == TOK_COMP_G {
+                        return reflect.ValueOf(temp).Interface().(float64) &gt;
+                                reflect.ValueOf(temp2).Interface().(float64), nil
+                } else if e.opType == TOK_COMP_SE {
+                        return reflect.ValueOf(temp).Interface().(float64) &lt;=
+                                reflect.ValueOf(temp2).Interface().(float64), nil
+                } else if e.opType == TOK_COMP_S {
+                        return reflect.ValueOf(temp).Interface().(float64) &lt;
+                                reflect.ValueOf(temp2).Interface().(float64), nil
+                }
+                return 0, fmt.Errorf("invalid expression")
+        } else if e.opType == TOK_COND_AND || e.opType == TOK_COND_OR {
+                if len(e.operands) != 2 {
+                        return 0, fmt.Errorf("invalid expression")
+                }
+                temp, err := e.operands[0].eval()
+                t := reflect.TypeOf(temp)
+                if err != nil || t.String() != "bool" {
+                        return 0, fmt.Errorf("invalid expression")
+                }
+                if reflect.ValueOf(temp).Interface().(bool) {
+                        if e.opType == TOK_COND_OR {
+                                return true, nil
+                        }
+                } else {
+                        if e.opType == TOK_COND_AND {
+                                return false, nil
+                        }
+                }
+                temp2, err2 := e.operands[1].eval()
+                t2 := reflect.TypeOf(temp2)
+                if err2 != nil || t2.String() != "bool" {
+                        return 0, fmt.Errorf("invalid expression")
+                }
+                if e.opType == TOK_COND_AND {
+                        return reflect.ValueOf(temp2).Interface().(bool), nil
+                } else if e.opType == TOK_COND_OR {
+                        return reflect.ValueOf(temp2).Interface().(bool), nil
+                }
+                return 0, fmt.Errorf("invalid expression")
+        } else if e.opType == TOK_COND_NOT {
+                if len(e.operands) != 1 {
+                        return 0, fmt.Errorf("invalid expression")
+                }
+                temp, err := e.operands[0].eval()
+                t := reflect.TypeOf(temp)
+                if err != nil || t.String() != "bool" {
+                        return 0, fmt.Errorf("invalid expression")
+                }
+                return !reflect.ValueOf(temp).Interface().(bool), nil
+        } else if e.opType == TOK_COND_IF {
+                if len(e.operands) != 3 {
+                        return 0, fmt.Errorf("invalid expression")
+                }
+                temp, err := e.operands[0].eval()
+                t := reflect.TypeOf(temp)
+                if err != nil || t.String() != "bool" {
+                        return 0, fmt.Errorf("invalid expression")
+                }
+                if reflect.ValueOf(temp).Interface().(bool) {
+
+                        return e.operands[1].eval()
+                } else {
+
+                        return e.operands[2].eval()
+                }
+        } else if e.opType == TOK_ADD {
+                for _, i := range e.operands {
+                        temp, err := i.eval()
+                        if err != nil {
+                                return 0, err
+                        }
+                        if t := reflect.TypeOf(temp); t.String() == "float64" {
+                                v = reflect.ValueOf(temp).Interface().(float64)
+                        }
+
+                        res += v
+                }
+        } else if e.opType == TOK_SUB {
+                for _, i := range e.operands {
+                        temp, err := i.eval()
+                        if err != nil {
+                                return 0, err
+                        }
+                        if t := reflect.TypeOf(temp); t.String() == "float64" {
+                                v = reflect.ValueOf(temp).Interface().(float64)
+                        }
+                        // assign the value to result if result is declared but not defined
+                        // This step is necessary for SUB MUL and DIV
+                        if res == 0 {
+                                res = v
+                                continue
+                        }
+                        res -= v
+                }
+        } else if e.opType == TOK_MUL {
+                for _, i := range e.operands {
+                        temp, err := i.eval()
+                        if err != nil {
+                                return 0, err
+                        }
+                        if t := reflect.TypeOf(temp); t.String() == "float64" {
+                                v = reflect.ValueOf(temp).Interface().(float64)
+                        }
+                        // assign the value to result if result is declared but not defined
+                        // This step is necessary for SUB MUL and DIV
+                        if res == 0 {
+                                res = v
+                                continue
+                        }
+                        res *= v
+                }
+        } else if e.opType == TOK_DIV {
+                for _, i := range e.operands {
+                        temp, err := i.eval()
+                        if err != nil {
+                                return 0, err
+                        }
+                        if t := reflect.TypeOf(temp); t.String() == "float64" {
+                                v = reflect.ValueOf(temp).Interface().(float64)
+                        }
+                        // assign the value to result if result is declared but not defined
+                        // This step is necessary for SUB MUL and DIV
+                        if res == 0 {
+                                res = v
+                                continue
+                        }
+                        if v == 0 {
+                                return 0, fmt.Errorf("cannot be divided by 0")
+                        }
+                        res /= v
+                }
+        }
+        return res, nil
+}
+
+/*
+printExp helps print exp nicely
+*/
+func (e *expNumber) PrintExp() string {
+        return fmt.Sprintf("%f ", e.val)
+}
+
+func (e *expOperator) PrintExp() string {
+        res := "NodeTokenType: (" + PrintTokenType(int(e.opType)) + " : "
+        for _, i := range e.operands {
+                res += i.PrintExp()
+        }
+        res += ") "
+        return res
+}
+
+func (e *expVar) PrintExp() string {
+        return fmt.Sprintf("%s ", e.varName)
+}
+
+func CopyMap(m map[string]Exp) map[string]Exp {
+        cp := make(map[string]Exp)
+        for k, v := range m {
+                cp[k] = v
+        }
+        return cp
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package minrkt
+
+import (
+        "fmt"
+)
+
+/*
+Parser enter function
+HW5 Update:
+
+        EXP,Eval and other function are<span class="cov8" title="1"> integrated into evaluator
+*/
+</span>func Parser(tokens []Token) Exp {
+        if err := lparen_checker(tokens); err != nil {
+                </span>fmt.Println("invalid expression")
+                return nil
+        <span class="cov8" title="1">}
+
+        // HW4 Update:</span><span class="cov8" title="1"> new parser function return the remainder of unconsumed tokens mentioned in fuen's #PR
+        root2, remainToken, err := CompleteParser(tokens, expOperator{})
+        if err != nil {
+                </span>fmt.Println(err)
+        <span class="cov8" title="1">        return nil
+</span>        }
+        if len(remainToken) != 0 {
+                </span>fmt.Println("invalid expression")
+        <span class="cov8" title="1">        return nil
+        }
+</span>        return root2
+}
+
+/*
+new completeParser function
+Take advice you mentioned in PR
+builder a parser tree recursively
+instead of update i, return unconsumed tokens
+it will be recognized invalid expression
+HW5 Update:
+
+        Identify Define function Name
+        Build Parser with new token type of define or define var
+*/
+func CompleteParser(tokens []Token, root expOperator) (Exp, []Token, error) {
+        if len(tokens) == 0 {
+                return nil, nil, nil
+        }
+        </span>if len(tokens) == 1 &amp;&amp; tokens[0].TokenType == TOK_NUM {
+                return &amp;expNumber{val: tokens[0].NumValue}, nil, nil
+        } else if len(tokens) == 1 &amp;&amp; tokens[0].TokenType<span class="cov8" title="1"> == TOK_BOOL_F {
+                return &amp;expOperator{opType: TOK_BOOL_F},</span><span class="cov0" title="0"> nil, nil
+        } else if len(tokens) == 1 &amp;&amp; tokens[0].TokenType == TOK_BOOL_T {
+                </span>return &amp;expOperator{opType: TOK_BOOL_T}, nil, nil
+        <span class="cov8" title="1">} else if len(tokens) == 1 </span><span class="cov0" title="0">&amp;&amp; tokens[0].TokenType == TOK_DEF_VAR {
+                return &amp;expVar{opType: tokens[0].TokenType, varName: tokens[0].DefineName}, nil, nil
+        }</span>
+
+        for len(tokens) != 0 {
+                if tokens[0].TokenType == TOK_LPAREN {
+</span>                        if root.opType == 0 {
+</span>                                tokens = tokens[1:]
+                        </span>        continue
+                <span class="cov8" title="1">        } else {
+</span>                                node, updateToken, err := CompleteParser(tokens[1:], expOperator{})
+                        </span>        if e<span class="cov8" title="1">rr != nil {
+                                        return nil, nil, err
+                        </span>        }
+                                roo<span class="cov8" title="1">t.operands = append(root.ope</span><span class="cov8" title="1">rands, node)
+                                tokens = updateToken
+</span>                        }
+                }</span> else if tokens[0].TokenType == TOK_NUM {
+                <span class="cov8" title="1">        if root.opType == TOK_N</span><span class="cov0" title="0">UM {
+                                return nil, nil, fmt.Errorf("invalid expression")
+                        </span>} else if root.opType == 0 {
+                <span class="cov8" title="1">                return nil, nil, fmt.</span><span class="cov0" title="0">Errorf("invalid expression")
+                        } else {
+                        </span>        root.operands = append(root.operands, &amp;expNumber{val: tokens[0].NumValue})
+                <span class="cov8" title="1">                tokens = tokens[1:]
+                                continue
+                        }
+</span>                } else if tokens[0].TokenType != TOK_RPAREN {
+                        </span>if root.opType == 0 {
+                <span class="cov8" title="1">                root.opType = tokens[0].TokenType
+</span>                                if tokens[0].TokenType == TOK_DEF_VAR {
+                                        root.operands = append(root.operands, &amp;expVar{opType: tokens[0].TokenType, varName: tokens[0].DefineName})
+                        </span>        }
+                <span class="cov0" title="0">                tokens = tokens[1:]
+</span>                                con<span class="cov8" title="1">tinue
+</span>                        } else if tokens[0].Tok</span><span class="cov0" title="0">enType == TOK_DEF_VAR {
+                                root.operands = append(root.operands, &amp;expVar{opType: tokens[0].TokenType, varName: tokens[0].DefineName})
+                        </span>        tokens = tokens[1:]
+                <span class="cov8" title="1">                continue
+                        } else {
+                                root.operands = append(root.operands, &amp;</span><span class="cov8" title="1">expOperator{opType: tokens[0].TokenType})
+                                tokens = tokens[1:]
+                        </span>        continue
+                <span class="cov8" title="1">        }
+                } else if tokens[0].TokenType == TOK_RPAREN {
+                        return &amp;root, tokens[1:], nil
+</span>                }
+        }
+</span>        r<span class="cov8" title="1">eturn nil, nil, fmt.Errorf(</span><span class="cov8" title="1">"invalid expression")
+}
+
+/*
+</span></span>HW4 Update: a Parser checker
+*/
+fun</span>c lpa<span class="cov8" title="1">ren_checker(tokens []Token) </span><span class="cov0" title="0">error {
+        var lparen_checker int
+        for _, i := range tokens {
+                i</span>f i.T<span class="cov8" title="1">okenType == TOK_LPAREN {
+</span>                        lparen_checker++
+                } else if i.TokenType == TOK_RPAREN {
+                        </span>lparen_checker--
+                <span class="cov0" title="0">}
+</span>        }
+</span>        if lparen_checker != 0 {
+</span>                return fmt.Errorf("invalid expression")
+        }
+</span>        r<span class="cov8" title="1">eturn nil
+}
+
+</span>//legacy code from HW3
+
+</span>//<span class="cov8" title="1"> func inCompleteParser(tokens []Token, point</span><span class="cov8" title="1">er int) (Exp, int, error) {
+//         // edge cases
+</span>//         if len(tokens) == 0 {
+//         </span>        return nil, 0, nil
+//         }
+//         if tokens[0].TokenType == T</span><span class="cov8" title="1">OK_NUM {
+//                 return &amp;expNumber{val: tokens[0].NumValue}, 0, nil
+//         </span>} else if len(tokens) == 1 &amp;&amp; (tokens[0].TokenType == TOK_BOOL_F || tokens[0].TokenType == TOK_BOOL_T) {
+//                 return &amp;expOperator{opType: tokens[0].TokenType}, 0, nil
+//<span class="cov8" title="1">         } else if tokens[0].TokenType != TOK_LPAREN {
+//                 return nil, 0, fmt.Errorf("invalid expression1")
+//         }
+</span>//         // main logic loop
+// </span>        root := expOperator{}
+//<span class="cov8" title="1">         for i := pointer; i &lt; len(</span><span class="cov8" title="1">tokens); i = i + 1 {
+//                 if i == 0 {
+// </span>                        co<span class="cov8" title="1">ntinue
+</span>//                 }
+// </span>                if tokens[i].TokenType == TOK_NUM {
+//<span class="cov0" title="0">                         root.operands = append(root.operands, </span>&amp;expNumber{val: tokens[i].NumValue})
+//                 } <span class="cov8" title="1">else if tokens[i].TokenType =</span><span class="cov8" title="1">= TOK_LPAREN {
+//                         // recursion call
+</span>//                         newNode, updatePointer, err := inCompleteParser(tokens, i+1)
+// </span>                        if err != nil {
+//<span class="cov8" title="1">                                 return nil, i, err
+//                         }
+//                         root.operands = append(root.operan</span><span class="cov0" title="0">ds, newNode)
+//                         if updatePointer != len(tokens)-1 {
+// </span>                                i = updatePointer
+//<span class="cov8" title="1">                         } else {
+</span>//                                 <span class="cov8" title="1">return nil, 0, fmt.Errorf("i</span><span class="cov8" title="1">nvalid expression2")
+//                         }
+</span>//                 } else if tokens[i].TokenType == TOK_RPAREN {
+// </span>                        return &amp;root, i, nil
+//<span class="cov8" title="1">                 } else {
+//                         //youwenti
+//                         if tokens[i-1].TokenType == TOK_LP</span><span class="cov0" title="0">AREN ||
+//                                 tokens[i-1].TokenType == TOK_BOOL_F ||
+// </span>                                tokens[i-1].TokenType == TOK_BOOL_T ||
+//<span class="cov8" title="1">                                 tokens[i-1].TokenType == TOK_COND_IF ||</span><span class="cov8" title="1">
+//                                 tokens[i-1].TokenType == TOK_COND_NOT ||
+// </span>                                t<span class="cov8" title="1">okens[i-1].TokenType == TOK_COND_OR {
+//                                 root.opType = tokens[i].TokenType
+// </span>                        } else {
+//                                 <span class="cov8" title="1">return nil, 0, fmt.Error</span><span class="cov8" title="1">f("invalid expression3")
+//                         }
+</span>//                 }
+//         }
+</span>
+//         </span>// check invalid expression by the end of recursion call
+// <span class="cov8" title="1">        if tokens[len(tokens)-1].TokenType != TOK_RPAREN {
+</span>//                 return nil, 0, fmt.Errorf("invalid expression4")
+//         </span>}
+
+</span>//         return &amp;root, 0, nil
+// }
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package minrkt
+
+import (
+        "fmt"
+        "regexp"
+        "strconv"
+        "strings"
+)
+
+/*
+global variables
+HW5 Update: two more token Regex
+*/
+var tokenRegexList = []string{
+        `^(\()`,
+        `^(\))`,
+        `^((?:\-)*[0]|[1-9][0-9]*(?:\.[0-9]*)?)`,
+        `^(\+)`,
+        `^(\-)`,
+        `^(\*)`,
+        `^(\/)`,
+        `^(\s+)`,
+        `^(\=)`,
+        `^(\&gt;=)`,
+        `^(\&gt;)`,
+        `^(\&lt;=)`,
+        `^(\&lt;)`,
+        `^(true|#t)`,
+        `^(false|#f)`,
+        `^(if)`,
+        `^(and)`,
+        `^(or)`,
+        `^(not)`,
+        `^(define$|define )`,
+        `^([a-zA-Z][a-zA-Z0-9_-]*)`,
+}
+
+var re = regexp.MustCompile(strings.Join(tokenRegexList, "|"))
+
+/*
+TokenType struct refactor
+HW5 Update: new var DefineName (string)
+*/
+type Token struct {
+        TokenType  TokenType
+        NumValue   float64
+        DefineName string
+}
+
+type TokenType int
+
+// TokenType enum
+// HW5 Update: TOK_DEFINE, TOK_DEF_VAR
+const (
+        TOK_INVALID TokenType = iota
+        TOK_LPAREN
+        TOK_RPAREN
+        TOK_NUM
+        TOK_ADD
+        TOK_SUB
+        TOK_MUL
+        TOK_DIV
+        TOK_WSP
+        TOK_COMP_EQ
+        TOK_COMP_GE
+        TOK_COMP_G
+        TOK_COMP_SE
+        TOK_COMP_S
+        TOK_BOOL_T
+        TOK_BOOL_F
+        TOK_COND_IF
+        TOK_COND_AND
+        TOK_COND_OR
+        TOK_COND_NOT
+        TOK_DEFINE
+</span>        TOK_DEF_VAR
+)
+</span>
+/*
+</span>A <span class="cov8" title="1">helper function to generate a token
+</span>HW5 Upd<span class="cov8" title="1">ate: Identify DefineName
+*/
+fu</span>nc GenerateToken(index int, s string) (Token, error) {
+        if index == 3 {
+                floatRes, err := strconv.ParseFloat(s, 64)
+                if err != nil {
+                        return Token{}, err
+                }
+                return Token{TokenType: TokenType(index), N<span class="cov8" title="1">umValue: floatRes}, nil
+        } else if index == 21 {
+                return Token{TokenType: TokenType(index), DefineName: s}, nil
+        } el</span><span class="cov8" title="1">se {
+                return Token{TokenType: TokenType(index)}, nil
+        }
+</span>}
+
+</span>/*<span class="cov8" title="1">
+</span>Tokenizer enter function
+*/
+</span>fu<span class="cov8" title="1">nc Tokenizer(line string) </span><span class="cov8" title="1">([]Token, error) {
+        remainder := line
+        var tokens []Token
+        fo</span>r {
+                <span class="cov8" title="1">token, newRemainder, err</span> := NextToken(remainder)
+                if err != nil {
+                        return nil, fmt.Errorf("invalid token: %v", err)
+                }
+                if token.TokenType != TOK_WSP {
+                        tokens = append(tokens, token)
+                }
+                if len(newRemainder) == 0 {
+                        fmt.Printf("[RESULT] Tokenizer final output:  %v\n", tokens)
+                        return tokens, nil
+                }
+                remainder = newRemainder
+</span>        }
+</span>}
+
+/*
+</span>Token logic function
+HW5 Update: Identify define function name or var name
+*<span class="cov8" title="1">/
+func NextToken(remainder string) (Token, </span><span class="cov8" title="1">string, error) {
+        outputString := re.FindStringSubmatch(remainder)
+        v</span>ar re<span class="cov8" title="1">gexIndex int
+        var rawString string
+        f</span>or i, temp := range outputString {
+                if temp != "" {
+        <span class="cov8" title="1">                regexIndex = i
+                        rawString = </span><span class="cov0" title="0">temp
+                }
+        }</span>
+
+</span>        var newRemainder string
+        i</span>f rawString == "(" || rawString == ")" {
+        <span class="cov8" title="1">        newRemainder = remainder[1:]
+</span>        } else if rawString == "define" || rawString == "define " {
+                newRemainder = remainder[6:]
+        } else {
+                newRemainder = strings.TrimLeft(remainder, rawString)
+        }
+
+        ResultToken, err := GenerateToken(regexIndex, rawString)
+        if err != nil {
+                return Token{}, "", err
+        }
+        if ResultToken.TokenType == TOK_INVALID {
+                return Token{}, "", fmt.Errorf("invalid token")
+        }
+        return ResultToken, newRemainder, nil
+}
+
+// print nicely only for debug
+var TokenStringArray = [...]string{
+        "TOK_INVALID",
+        "TOK_LPAREN",
+        "TOK_RPAREN",
+        "TOK_NUM",
+        "TOK_ADD",
+        "TOK_SUB",
+        "TOK_MUL",
+        "TOK_DIV",
+        "TOK_WSP",
+        "TOK_COMP_EQ",
+        </span>"TOK_COMP_GE",
+        "TOK_COMP_G",
+        "TOK_COMP_SE",
+        "TOK_COMP_S",
+        "TOK_BOOL_T",
+        "TOK_BOOL_F",
+        "TOK_COND_IF",
+        "TOK_COND_AND",
+        "TOK_COND_OR",
+        "TOK_COND_NOT",
+        "TOK_DEFINE",
+        "TOK_DEF_VAR",
+}
+
+// print nicely only for debug
+func PrintTokenType(index int) string {
+        return TokenStringArray[index]
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
